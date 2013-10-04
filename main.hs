@@ -1,1 +1,1 @@
-main = putStrLn "Road Runner : Machine à laver"
+main = putStrLn "Road Runner : Machine à laver test"
