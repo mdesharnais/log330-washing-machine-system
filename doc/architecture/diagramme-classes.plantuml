@@ -1,0 +1,41 @@
+State <|-- WashingState
+State <|-- IddleState
+WashingState <|-- CottonState
+WashingState <|-- DisinfectionState
+WashingState <|-- RoughState
+WashingState <|-- SoakingSpinningState
+WashingState <|-- SyntheticState
+
+class State {
+    name : String
+}
+
+class WashingState {
+    waterTemperature : Celcius
+    waterLevel : Percentage
+    washingDuration : Minute
+    washingSpeed : AgitationPerMinute
+    washingUseSoap : Boolean
+    washingUseBleach : Boolean
+    washingUseFabricSoftener : Boolean
+    spinningDuration : Minute
+    spinningSpeed : RotationPerMinute
+}
+
+class IddleState {
+}
+
+class CottonState {
+}
+
+class DisinfectionState {
+}
+
+class RoughState {
+}
+
+class SoakingSpinningState {
+}
+
+class SyntheticState {
+}
