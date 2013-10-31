@@ -1,0 +1,16 @@
+[*] -down-> IddleState
+IddleState -> IddleState : Stop
+IddleState -down-> CottonState : Cotton
+CottonState -up-> IddleState : Stop
+
+state CottonState {
+    [*] -down-> Configuring
+    Configuring -> Configuring : Water button pushed
+    Configuring -down-> FillingWater : Start button pushed
+    FillingWater -down-> Washing : Water level achieved
+    Washing -down-> Spinning : Washing time elapsed
+    Washing -> Washing : Soap time
+    Washing -> Washing : Bleach time
+    Washing -> Washing : Fabric softener time
+    Spinning -down-> [*] : Spinning time elapsed
+}
