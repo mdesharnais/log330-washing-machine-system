@@ -1,0 +1,35 @@
+package "Sensors" {
+    [WaterLevelSensor]
+}
+
+package "Motors" {
+    [AgitatorEngine]
+    [WaterPumpEngine]
+}
+
+package "Valves" {
+    [ColdWaterValve]
+    [HotWaterValve]
+    [SoapValve]
+    [BleachValve]
+    [FabricSoftenerValve]
+}
+
+package "UserInterface" {
+    [Screen]
+    [DebugScreen]
+    [Buttons]
+}
+
+package "Core" {
+    [State] - [IO]
+    Input - [IO]
+    [IO] - Output
+}
+
+WaterLevelSensor -> Input
+Buttons -> Input
+Output -> Screen
+Output -> DebugScreen
+Output -> Valves
+Output -up-> Motors
