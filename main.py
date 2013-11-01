@@ -4,12 +4,12 @@ import sys
 import select
 
 # The main concept of the application is a state object that contain the current state of the
-# machine: be it iddle or currently washing.
+# machine: be it idle or currently washing.
 
 # A state is define (for the moment) as a 3-tuple
 # (name :: String, desiredWaterLevel :: Double, currentWaterLevel :: Double)
 # where water levels are number between 0.0 and 1.0
-iddleState = ("iddle", 0, 0)
+idleState = ("idle", 0, 0)
 
 states = {
     "cotton" : ("cotton", 0.0, 0.0),
@@ -38,7 +38,7 @@ def waterSensor(state, value = 1.0):
     )
 
 def stop(state):
-    return iddleState
+    return idleState
 
 # Helper functions
 def showPrompt(state):
@@ -54,7 +54,7 @@ inputs = {
 # a time input every 0.1 second to let the state evolve with time.
 #
 # You can quit the main loop by pressing Ctrl-d
-state = iddleState
+state = idleState
 print("Road Runner : Machine à laver")
 showPrompt(state)
 eof = False

@@ -1,5 +1,5 @@
 State <|-- WashingState
-State <|-- IddleState
+State <|-- IdleState
 WashingState <|-- CottonState
 WashingState <|-- DisinfectionState
 WashingState <|-- RoughState
@@ -8,6 +8,7 @@ WashingState <|-- SyntheticState
 
 class State {
     name : String
+    isDoorOpened : Boolean
 }
 
 class WashingState {
@@ -22,7 +23,7 @@ class WashingState {
     spinningSpeed : RotationPerMinute
 }
 
-class IddleState {
+class IdleState {
 }
 
 class CottonState {

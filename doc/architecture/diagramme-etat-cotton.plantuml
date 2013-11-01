@@ -1,7 +1,7 @@
-[*] -down-> IddleState
-IddleState -> IddleState : Stop
-IddleState -down-> CottonState : Cotton
-CottonState -up-> IddleState : Stop
+[*] -down-> IdleState
+IdleState -> IdleState : Stop
+IdleState -down-> CottonState : Cotton
+CottonState -up-> IdleState : Stop
 
 state CottonState {
     [*] -down-> Configuring
