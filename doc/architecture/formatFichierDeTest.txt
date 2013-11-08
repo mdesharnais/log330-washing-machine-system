@@ -1,0 +1,4 @@
+<nombre de minutes depuis le début du cycle :: Double> <composant> <signal> <args>
+11.4 water-sensor water-level 0.8
+13.2 water-sensor water-level 1.0
+25.0 composant-imaginaire signal-imaginaire 10 "Erreur critique"
