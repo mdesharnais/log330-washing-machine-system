@@ -1,79 +1,147 @@
 #!/usr/bin/python3
 
+import copy
 import sys
-import select
 
 # The main concept of the application is a state object that contain the current state of the
 # machine: be it idle or currently washing.
 
-# A state is define (for the moment) as a 3-tuple
-# (name :: String, desiredWaterLevel :: Double, currentWaterLevel :: Double)
-# where water levels are number between 0.0 and 1.0
-idleState = ("idle", 0, 0)
+class IddleState:
+    pass
 
-states = {
-    "cotton" : ("cotton", 0.0, 0.0),
-    "disinfection" : ("disinfection", 0.5, 0.0),
-    "rough" : ("rough", 0.0, 0.0),
-    "soaking-spinning" : ("soaking-spinning", 1.0, 0.0),
-    "synthetic" : ("synthetic", 0.0, 0.0)
-}
+class CottonState:
+    def __init__(self):
+        self.currentWaterLevel = 0.0
+        self.desiredWaterLevel = 0.2
+        self.washingDuration = 45.0
+        self.spinningDuration = 10.0
+        self.isStarted = False
+        self.isColdWaterValveOpened = False
+        self.isHotWaterValveOpened = False
 
-# The differents states can respond to different inputs. Those can be time related (e.g. timed
-# passed and we now need to switch from soaking to spinning), sensor related (e.g. the water sensor
-# indicate that the water tank is full) or user related (e.g. the user push the stop button).
-#
+    def __str__(self):
+        # Highly boilerplate code and very hard to keep in sync with actual class definition.
+        # Is there a way to automatically generate a __str__ member function?
+        return ("CottonState {{ " +
+            "currentWaterLevel = {:.1f}, " +
+            "desiredWaterLevel = {:.1f}, " +
+            "washingDuration = {:.1f}, " +
+            "spinningDuration = {:.1f}, " +
+            "isStarted = {}, " +
+            "isColdWaterValveOpened = {}, " +
+            "isHotWaterValveOpened = {} " +
+            "}}").format(
+            self.currentWaterLevel,
+            self.desiredWaterLevel,
+            self.washingDuration,
+            self.spinningDuration,
+            self.isStarted,
+            self.isColdWaterValveOpened,
+            self.isHotWaterValveOpened)
+
 # Those input are represent as function that receive a state, some input informations and produce
 # a new state corresponding to the responce of the system (e.g. if the desired water capacity is
 # achieved, the function could trigger an output to stop the water valve and return a new state
 # where we start to add soap.
-def timePassed(state, delta=1.0):
+
+def cottonButtonPushed(state):
+    newState = CottonState()
+    print(newState)
+    return newState
+
+def startButtonPushed(state):
+    newState = copy.deepcopy(state)
+    newState.isStarted = True
+    newState.isColdWaterValveOpened = True
+    newState.isHotWaterValveOpened = True
+    print("ColdWaterValve opened")
+    print("HotWaterValve opened")
+    print(newState)
+    return newState
+
+def waterLevelButtonPushed(state):
+    newState = copy.deepcopy(state)
+
+    if newState.desiredWaterLevel == 1.0:
+        newState.desiredWaterLevel = 0.0
+
+    newState.desiredWaterLevel += 0.2
+
+    print(newState)
+    return newState
+
+def waterLevelSensorLevel(state, level):
+    newState = copy.deepcopy(state)
+    newState.currentWaterLevel = float(level)
+
+    if newState.currentWaterLevel == newState.desiredWaterLevel:
+        newState.isColdWaterValveOpened = False
+        newState.isHotWaterValveOpened = False
+        print("ColdWaterValve closed")
+        print("HotWaterValve closed")
+
+    print(newState)
+    return newState
+
+def timePassed(state, time):
+    # print("timePassed {}".format(time))
     return state
 
-def waterSensor(state, value = 1.0):
-    return (
-        "{}-water-sensor".format(state[0]),
-        state[1],
-        state[2]
-    )
+def finalStateMessage(state):
+    #return state.__class__.__name__
+    return state.__str__()
 
-def stop(state):
-    return idleState
-
-# Helper functions
-def showPrompt(state):
-    print("{}> ".format(state[0]), end="")
-    sys.stdout.flush()
-
-inputs = {
-    "water-sensor" : waterSensor,
-    "stop" : stop
+commands = {
+    "cotton-button" : {
+        "pushed" : cottonButtonPushed
+    },
+    "start-button" : {
+        "pushed" : startButtonPushed
+    },
+    "water-level-button" : {
+        "pushed" : waterLevelButtonPushed
+    },
+    "water-level-sensor" : {
+        "level" : waterLevelSensorLevel
+    },
 }
 
-# The main loop will wait for inputs and execute them on the state. Furthermore, it will trigger
-# a time input every 0.1 second to let the state evolve with time.
-#
-# You can quit the main loop by pressing Ctrl-d
-state = idleState
-print("Road Runner : Machine à laver")
-showPrompt(state)
-eof = False
-while not eof:
-    (r,w,e) = select.select([sys.stdin],[],[],0.1)
-    if not r:
-        state = timePassed(state)
-    else:
-        command = sys.stdin.readline().strip()
-        if not command:
-            eof = True;
-            print() # Insert a newline before to quit
-        elif command in states:
-            state = states[command]
-            showPrompt(state)
-        elif command in inputs:
-            state = inputs[command](state)
-            showPrompt(state)
-        else:
-            print("Unknow command: '{}'".format(command))
-            showPrompt(state)
+def parseCommand(line):
+    # Format is as follow:
+    # <time-in-minutes :: Double> <component> <signal> <args0> <arg1> ... <argN>
+    words = line.split()
+    time = float(words[0])
+    component = words[1]
+    message = words[2]
+    args = words[3:]
+    command = lambda state: commands[component][message](state, *args)
+    return (time, command)
 
+def runWashingMachineWithTime(time, endTime, state):
+    # We update the state every 0.25 minutes = 15 seconds until we reach the end time
+    delta = 0.25
+    if time + delta < endTime:
+        return runWashingMachineWithTime(time + delta, endTime, timePassed(state, time))
+    else:
+        return state
+
+def runWashingMachine(inputStream, time, state):
+    line = inputStream.readline()
+    if not line:
+        # Run for 120 minutes after the last command to let any ongoing cycle terminate
+        return runWashingMachineWithTime(time, time + 120.0, state)
+    else:
+        (commandTime,commandFunction) = parseCommand(line)
+
+        # Run for the time between the two last commands
+        tempState = runWashingMachineWithTime(time, commandTime, state)
+
+        # Run the command
+        newState = commandFunction(tempState)
+        return runWashingMachine(inputStream, commandTime, newState)
+
+if len(sys.argv) != 2:
+    print("Usage: washing-machine <test-file>")
+else:
+    endState = runWashingMachine(open(sys.argv[1]), 0.0, IddleState())
+    print(finalStateMessage(endState))
