@@ -13,53 +13,73 @@ class CottonState:
     def __init__(self):
         self.currentWaterLevel = 0.0
         self.desiredWaterLevel = 0.2
+        self.soapWaterLevel = 0.2
         self.washingDuration = 45.0
         self.spinningDuration = 10.0
-        self.isStarted = False
+        self.soapDuration = 0.1
+        self.isWashing = False
+        self.isSpinning = False
+        self.isSoapValveOpened = False
         self.isColdWaterValveOpened = False
         self.isHotWaterValveOpened = False
+        self.washingStartedTime = 0.0
+        self.spinningStartedTime = 0.0
+        self.soapStartedTime = 0.0
 
     def __str__(self):
         # Highly boilerplate code and very hard to keep in sync with actual class definition.
         # Is there a way to automatically generate a __str__ member function?
         return ("CottonState {{ " +
-            "currentWaterLevel = {:.1f}, " +
-            "desiredWaterLevel = {:.1f}, " +
-            "washingDuration = {:.1f}, " +
-            "spinningDuration = {:.1f}, " +
-            "isStarted = {}, " +
+            "currentWaterLevel = {:.2f}, " +
+            "desiredWaterLevel = {:.2f}, " +
+            "soapWaterLevel = {:.2f}, " +
+            "washingDuration = {:.2f}, " +
+            "spinningDuration = {:.2f}, " +
+            "soapDuration = {:.2f}, " +
+            "isWashing = {}, " +
+            "isSpinning = {}, " +
+            "isSoapValveOpened = {}, " +
             "isColdWaterValveOpened = {}, " +
-            "isHotWaterValveOpened = {} " +
+            "isHotWaterValveOpened = {}, " +
+            "washingStartedTime = {:.2f}, " +
+            "spinningStartedTime = {:.2f} " +
+            "soapStartedTime = {:.2f} " +
             "}}").format(
             self.currentWaterLevel,
             self.desiredWaterLevel,
+            self.soapWaterLevel,
             self.washingDuration,
             self.spinningDuration,
-            self.isStarted,
+            self.soapDuration,
+            self.isWashing,
+            self.isSpinning,
+            self.isSoapValveOpened,
             self.isColdWaterValveOpened,
-            self.isHotWaterValveOpened)
+            self.isHotWaterValveOpened,
+            self.washingStartedTime,
+            self.spinningStartedTime,
+            self.soapStartedTime)
 
 # Those input are represent as function that receive a state, some input informations and produce
 # a new state corresponding to the responce of the system (e.g. if the desired water capacity is
 # achieved, the function could trigger an output to stop the water valve and return a new state
 # where we start to add soap.
 
-def cottonButtonPushed(state):
+def cottonButtonPushed(time, state):
     newState = CottonState()
-    print(newState)
+    #print(newState)
     return newState
 
-def startButtonPushed(state):
+def startButtonPushed(time, state):
     newState = copy.deepcopy(state)
-    newState.isStarted = True
     newState.isColdWaterValveOpened = True
     newState.isHotWaterValveOpened = True
-    print("ColdWaterValve opened")
-    print("HotWaterValve opened")
-    print(newState)
+    print("{:.2f} ColdWaterValve opened".format(time))
+    print("{:.2f} HotWaterValve opened".format(time))
+    #print(newState)
     return newState
 
-def waterLevelButtonPushed(state):
+def waterLevelButtonPushed(time, state):
     newState = copy.deepcopy(state)
 
     if newState.desiredWaterLevel == 1.0:
@@ -67,25 +87,48 @@ def waterLevelButtonPushed(state):
 
     newState.desiredWaterLevel += 0.2
 
-    print(newState)
+    #print(newState)
     return newState
 
-def waterLevelSensorLevel(state, level):
+def waterLevelSensorLevel(time, state, level):
     newState = copy.deepcopy(state)
     newState.currentWaterLevel = float(level)
+
+    if newState.soapStartedTime == 0.0 and newState.currentWaterLevel >= newState.soapWaterLevel:
+        newState.isSoapValveOpened = True
+        newState.soapStartedTime = time
+        print("{:.2f} SoapValve opened".format(time))
 
     if newState.currentWaterLevel == newState.desiredWaterLevel:
         newState.isColdWaterValveOpened = False
         newState.isHotWaterValveOpened = False
-        print("ColdWaterValve closed")
-        print("HotWaterValve closed")
+        print("{:.2f} ColdWaterValve closed".format(time))
+        print("{:.2f} HotWaterValve closed".format(time))
+        newState.isWashing = True
+        newState.washingStartedTime = time
+        print("{:.2f} Washing started".format(time))
 
-    print(newState)
+    #print(newState)
     return newState
 
-def timePassed(state, time):
-    # print("timePassed {}".format(time))
-    return state
+def timePassed(time, state):
+    newState = copy.deepcopy(state)
+
+    if newState.isSoapValveOpened and time >= (state.soapStartedTime + state.soapDuration):
+        newState.isSoapValveOpened = False
+        print("{:.2f} SoapValve closed".format(time))
+
+    if state.isWashing and time >= (state.washingStartedTime + state.washingDuration):
+        newState.isWashing = False
+        print("{:.2f} Washing ended".format(time))
+        newState.isSpinning = True
+        newState.spinningStartedTime = time
+        print("{:.2f} Spinning started".format(time))
+    elif state.isSpinning and time >= (state.spinningStartedTime + state.spinningDuration):
+        newState.isSpinning = False
+        print("{:.2f} Spinning ended".format(time))
+        
+    return newState
 
 def finalStateMessage(state):
     #return state.__class__.__name__
@@ -114,14 +157,14 @@ def parseCommand(line):
     component = words[1]
     message = words[2]
     args = words[3:]
-    command = lambda state: commands[component][message](state, *args)
+    command = lambda time, state: commands[component][message](time, state, *args)
     return (time, command)
 
 def runWashingMachineWithTime(time, endTime, state):
     # We update the state every 0.25 minutes = 15 seconds until we reach the end time
-    delta = 0.25
+    delta = 0.2
     if time + delta < endTime:
-        return runWashingMachineWithTime(time + delta, endTime, timePassed(state, time))
+        return runWashingMachineWithTime(time + delta, endTime, timePassed(time, state))
     else:
         return state
 
@@ -137,7 +180,7 @@ def runWashingMachine(inputStream, time, state):
         tempState = runWashingMachineWithTime(time, commandTime, state)
 
         # Run the command
-        newState = commandFunction(tempState)
+        newState = commandFunction(commandTime, tempState)
         return runWashingMachine(inputStream, commandTime, newState)
 
 if len(sys.argv) != 2:
