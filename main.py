@@ -9,7 +9,7 @@ import sys
 class IddleState:
     pass
 
-class CottonState:
+class WashingState:
     def __init__(self):
         self.currentWaterLevel = 0.0
         self.desiredWaterLevel = 0.2
@@ -37,7 +37,7 @@ class CottonState:
     def __str__(self):
         # Highly boilerplate code and very hard to keep in sync with actual class definition.
         # Is there a way to automatically generate a __str__ member function?
-        return ("CottonState {{ " +
+        return ("WashingState {{ " +
             "currentWaterLevel = {:.2f}, " +
             "desiredWaterLevel = {:.2f}, " +
             "soapWaterLevel = {:.2f}, " +
@@ -90,8 +90,38 @@ class CottonState:
 # where we start to add soap.
 
 def cottonButtonPushed(time, state):
-    newState = CottonState()
-    #print(newState)
+    newState = WashingState()
+    newState.washingDuration = 45.0
+    newState.spinningDuration = 10.0
+    return newState
+
+def disinfectionButtonPushed(time, state):
+    newState = WashingState()
+    newState.washingDuration = 45.0
+    newState.spinningDuration = 10.0
+    newState.desiredWaterLevel = 0.5
+    return newState
+
+def roughButtonPushed(time, state):
+    newState = WashingState()
+    newState.washingDuration = 45.0
+    newState.spinningDuration = 10.0
+    return newState
+
+def soakingSpinningButtonPushed(time, state):
+    newState = WashingState()
+    newState.washingDuration = 10.0
+    newState.spinningDuration = 15.0
+    newState.soapStartedTime = -1.0
+    newState.bleachStartedTime = -1.0
+    newState.fabricSoftenerStartedTime = -1.0
+    newState.desiredWaterLevel = 1.0
+    return newState
+
+def syntheticButtonPushed(time, state):
+    newState = WashingState()
+    newState.washingDuration = 30.0
+    newState.spinningDuration = 5.0
     return newState
 
 def startButtonPushed(time, state):
@@ -100,7 +130,6 @@ def startButtonPushed(time, state):
     newState.isHotWaterValveOpened = True
     print("{:.2f} ColdWaterValve opened".format(time))
     print("{:.2f} HotWaterValve opened".format(time))
-    #print(newState)
     return newState
 
 def waterLevelButtonPushed(time, state):
@@ -111,7 +140,6 @@ def waterLevelButtonPushed(time, state):
 
     newState.desiredWaterLevel += 0.2
 
-    #print(newState)
     return newState
 
 def waterLevelSensorLevel(time, state, level):
@@ -137,7 +165,6 @@ def waterLevelSensorLevel(time, state, level):
         newState.washingStartedTime = time
         print("{:.2f} Washing started".format(time))
 
-    #print(newState)
     return newState
 
 def timePassed(time, state):
@@ -185,6 +212,18 @@ def finalStateMessage(state):
 commands = {
     "cotton-button" : {
         "pushed" : cottonButtonPushed
+    },
+    "disinfection-button" : {
+        "pushed" : disinfectionButtonPushed
+    },
+    "rough-button" : {
+        "pushed" : roughButtonPushed
+    },
+    "soaking-spinning-button" : {
+        "pushed" : soakingSpinningButtonPushed
+    },
+    "synthetic-button" : {
+        "pushed" : syntheticButtonPushed
     },
     "start-button" : {
         "pushed" : startButtonPushed
