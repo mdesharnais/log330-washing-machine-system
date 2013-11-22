@@ -1,0 +1,12 @@
+0.0 soaking-spinning-button pushed
+0.1 start-button pushed
+1.1 water-level-sensor level 0.1
+2.1 water-level-sensor level 0.2
+3.1 water-level-sensor level 0.3
+4.1 water-level-sensor level 0.4
+5.1 water-level-sensor level 0.5
+6.1 water-level-sensor level 0.6
+7.1 water-level-sensor level 0.7
+8.1 water-level-sensor level 0.8
+9.1 water-level-sensor level 0.9
+10.1 water-level-sensor level 1.0
