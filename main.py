@@ -14,17 +14,25 @@ class CottonState:
         self.currentWaterLevel = 0.0
         self.desiredWaterLevel = 0.2
         self.soapWaterLevel = 0.2
+        self.bleachWaterLevel = 1.0
+        self.fabricSoftenerWashingDelta = -5.0
         self.washingDuration = 45.0
         self.spinningDuration = 10.0
         self.soapDuration = 0.1
+        self.bleachDuration = 0.1
+        self.fabricSoftenerDuration = 0.1
         self.isWashing = False
         self.isSpinning = False
         self.isSoapValveOpened = False
+        self.isBleachValveOpened = False
+        self.isFabricSoftenerValveOpened = False
         self.isColdWaterValveOpened = False
         self.isHotWaterValveOpened = False
         self.washingStartedTime = 0.0
         self.spinningStartedTime = 0.0
         self.soapStartedTime = 0.0
+        self.bleachStartedTime = 0.0
+        self.fabricSoftenerStartedTime = 0.0
 
     def __str__(self):
         # Highly boilerplate code and very hard to keep in sync with actual class definition.
@@ -33,32 +41,48 @@ class CottonState:
             "currentWaterLevel = {:.2f}, " +
             "desiredWaterLevel = {:.2f}, " +
             "soapWaterLevel = {:.2f}, " +
+            "bleachWaterLevel = {:.2f}, " +
+            "fabricSoftenerWashingDelta = {:.2f}, " +
             "washingDuration = {:.2f}, " +
             "spinningDuration = {:.2f}, " +
             "soapDuration = {:.2f}, " +
+            "bleachDuration = {:.2f}, " +
+            "fabricSoftenerDuration = {:.2f}, " +
             "isWashing = {}, " +
             "isSpinning = {}, " +
             "isSoapValveOpened = {}, " +
+            "isBleachValveOpened = {}, " +
+            "isFabricSoftenerValveOpened = {}, " +
             "isColdWaterValveOpened = {}, " +
             "isHotWaterValveOpened = {}, " +
             "washingStartedTime = {:.2f}, " +
             "spinningStartedTime = {:.2f} " +
             "soapStartedTime = {:.2f} " +
+            "bleachStartedTime = {:.2f} " +
+            "fabricSoftenerStartedTime = {:.2f} " +
             "}}").format(
             self.currentWaterLevel,
             self.desiredWaterLevel,
             self.soapWaterLevel,
+            self.bleachWaterLevel,
+            self.fabricSoftenerWashingDelta,
             self.washingDuration,
             self.spinningDuration,
             self.soapDuration,
+            self.bleachDuration,
+            self.fabricSoftenerDuration,
             self.isWashing,
             self.isSpinning,
             self.isSoapValveOpened,
+            self.isBleachValveOpened,
+            self.isFabricSoftenerValveOpened,
             self.isColdWaterValveOpened,
             self.isHotWaterValveOpened,
             self.washingStartedTime,
             self.spinningStartedTime,
-            self.soapStartedTime)
+            self.soapStartedTime,
+            self.bleachStartedTime,
+            self.fabricSoftenerStartedTime)
 
 # Those input are represent as function that receive a state, some input informations and produce
 # a new state corresponding to the responce of the system (e.g. if the desired water capacity is
@@ -99,6 +123,11 @@ def waterLevelSensorLevel(time, state, level):
         newState.soapStartedTime = time
         print("{:.2f} SoapValve opened".format(time))
 
+    if newState.bleachStartedTime == 0.0 and newState.currentWaterLevel >= newState.bleachWaterLevel:
+        newState.isBleachValveOpened = True
+        newState.bleachStartedTime = time
+        print("{:.2f} BleachValve opened".format(time))
+
     if newState.currentWaterLevel == newState.desiredWaterLevel:
         newState.isColdWaterValveOpened = False
         newState.isHotWaterValveOpened = False
@@ -114,17 +143,36 @@ def waterLevelSensorLevel(time, state, level):
 def timePassed(time, state):
     newState = copy.deepcopy(state)
 
-    if newState.isSoapValveOpened and time >= (state.soapStartedTime + state.soapDuration):
+    if newState.isSoapValveOpened and time >= (newState.soapStartedTime + newState.soapDuration):
         newState.isSoapValveOpened = False
         print("{:.2f} SoapValve closed".format(time))
 
-    if state.isWashing and time >= (state.washingStartedTime + state.washingDuration):
+    if newState.isBleachValveOpened and time >= (newState.bleachStartedTime + newState.bleachDuration):
+        newState.isBleachValveOpened = False
+        print("{:.2f} BleachValve closed".format(time))
+
+    if newState.isFabricSoftenerValveOpened and time >= (newState.fabricSoftenerStartedTime + newState.fabricSoftenerDuration):
+        newState.isFabricSoftenerValveOpened = False
+        print("{:.2f} FabricSoftener closed".format(time))
+
+    if newState.isWashing and newState.fabricSoftenerStartedTime == 0.0:
+        if newState.fabricSoftenerWashingDelta >= 0.0:
+            t = newState.washingStartedTime + newState.fabricSoftenerWashingDelta
+        else:
+            t = (newState.washingStartedTime + newState.washingDuration) + newState.fabricSoftenerWashingDelta
+
+        if time >= t:
+            newState.isFabricSoftenerValveOpened = True
+            newState.fabricSoftenerStartedTime = time
+            print("{:.2f} FabricSoftener opened".format(time))
+
+    if state.isWashing and time >= (newState.washingStartedTime + newState.washingDuration):
         newState.isWashing = False
         print("{:.2f} Washing ended".format(time))
         newState.isSpinning = True
         newState.spinningStartedTime = time
         print("{:.2f} Spinning started".format(time))
-    elif state.isSpinning and time >= (state.spinningStartedTime + state.spinningDuration):
+    elif state.isSpinning and time >= (newState.spinningStartedTime + newState.spinningDuration):
         newState.isSpinning = False
         print("{:.2f} Spinning ended".format(time))
         
