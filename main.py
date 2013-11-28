@@ -105,12 +105,14 @@ class WashingState:
 # where we start to add soap.
 
 def cottonButtonPushed(time, state):
+    writeMemoryAddress(0x0200, readMemoryAddress(0x0200) | 0b00100000)
     newState = WashingState()
     newState.washingDuration = 45.0
     newState.spinningDuration = 10.0
     return newState
 
 def disinfectionButtonPushed(time, state):
+    writeMemoryAddress(0x0700, readMemoryAddress(0x0700) | 0b00000001)
     newState = WashingState()
     newState.washingDuration = 45.0
     newState.spinningDuration = 10.0
@@ -118,12 +120,14 @@ def disinfectionButtonPushed(time, state):
     return newState
 
 def roughButtonPushed(time, state):
+    writeMemoryAddress(0x0200, readMemoryAddress(0x0200) | 0b10000000)
     newState = WashingState()
     newState.washingDuration = 45.0
     newState.spinningDuration = 10.0
     return newState
 
 def soakingSpinningButtonPushed(time, state):
+    writeMemoryAddress(0x0700, readMemoryAddress(0x0700) | 0b00100000)
     newState = WashingState()
     newState.washingDuration = 10.0
     newState.spinningDuration = 15.0
@@ -134,12 +138,14 @@ def soakingSpinningButtonPushed(time, state):
     return newState
 
 def syntheticButtonPushed(time, state):
+    writeMemoryAddress(0x0200, readMemoryAddress(0x0200) | 0b01000000)
     newState = WashingState()
     newState.washingDuration = 30.0
     newState.spinningDuration = 5.0
     return newState
 
 def startButtonPushed(time, state):
+    writeMemoryAddress(0x0200, readMemoryAddress(0x0200) | 0b00010000);
     newState = copy.deepcopy(state)
 
     newState.isColdWaterValveOpened = True
@@ -159,6 +165,8 @@ def waterLevelButtonPushed(time, state):
         newState.desiredWaterLevel = 0.0
 
     newState.desiredWaterLevel += 0.2
+
+    writeMemoryAddress(0x0200, (readMemoryAddress(0x0200) & 0b11110000) | int(newState.desiredWaterLevel * 10));
 
     return newState
 
@@ -180,14 +188,14 @@ def waterLevelSensorLevel(time, state, level):
         newState.soapStartedTime = time
         writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b00010000);
         print("{:.2f} SoapValve opened".format(time))
-        sleep(2.0)
+        sleep(2.5)
 
     if newState.bleachStartedTime == 0.0 and newState.currentWaterLevel >= newState.bleachWaterLevel:
         newState.isBleachValveOpened = True
         newState.bleachStartedTime = time
         writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b00100000);
         print("{:.2f} BleachValve opened".format(time))
-        sleep(2.0)
+        sleep(2.5)
 
     if newState.currentWaterLevel == newState.desiredWaterLevel:
         newState.isColdWaterValveOpened = False
@@ -200,6 +208,7 @@ def waterLevelSensorLevel(time, state, level):
         newState.isWashing = True
 
         newState.washingStartedTime = time
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b00000001);
         print("{:.2f} Washing started".format(time))
 
     return newState
@@ -233,16 +242,18 @@ def timePassed(time, state):
             newState.fabricSoftenerStartedTime = time
             writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b01000000);
             print("{:.2f} FabricSoftener opened".format(time))
-            sleep(2.0)
+            sleep(2.5)
 
     if state.isWashing and time >= (newState.washingStartedTime + newState.washingDuration):
         newState.isWashing = False
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b00000010);
         print("{:.2f} Washing ended".format(time))
         newState.isSpinning = True
         newState.spinningStartedTime = time
         print("{:.2f} Spinning started".format(time))
     elif state.isSpinning and time >= (newState.spinningStartedTime + newState.spinningDuration):
         newState.isSpinning = False
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) & 0b11111110);
         print("{:.2f} Spinning ended".format(time))
         
     return newState
@@ -293,7 +304,7 @@ def runWashingMachineWithTime(time, endTime, state):
     # We update the state every 0.25 minutes = 15 seconds until we reach the end time
     delta = 0.1
     while time + delta < endTime:
-        sleep(0.25)
+        sleep(0.05)
         time += delta
         state = timePassed(time, state)
     return state
