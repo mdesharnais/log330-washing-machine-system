@@ -165,6 +165,15 @@ def waterLevelButtonPushed(time, state):
 def waterLevelSensorLevel(time, state, level):
     newState = copy.deepcopy(state)
     newState.currentWaterLevel = float(level)
+    # A water level of 0.5 is translate in the following way:
+    # (0b???????? & 0b11100001) | (int(0.5 * 10) << 1)
+    # (0b???????? & 0b11100001) | (int(5.0) << 1)
+    # (0b???????? & 0b11100001) | (5 << 1)
+    # (0b???????? & 0b11100001) | (0b00000101 << 1)
+    # (0b???????? & 0b11100001) | 0b00001010
+    # 0b???0000? | 0b00001010
+    # 0b???1010?
+    writeMemoryAddress(0x0700, (readMemoryAddress(0x0700) & 0b11100001) | (int(newState.currentWaterLevel * 10) << 1));
 
     if newState.soapStartedTime == 0.0 and newState.currentWaterLevel >= newState.soapWaterLevel:
         newState.isSoapValveOpened = True
