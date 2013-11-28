@@ -2,6 +2,21 @@
 
 import copy
 import sys
+from time import sleep
+
+# 0x200 = 2 * (8 bits + 1 newline) = 18
+def offsetOfMemoryAddress(address):
+    return (address >> 8) * 9
+
+def readMemoryAddress(address):
+    memory = open("memory", "r")
+    memory.seek(offsetOfMemoryAddress(address));
+    return int(memory.read(8), 2)
+
+def writeMemoryAddress(address, byte):
+    memory = open("memory", "r+")
+    memory.seek(offsetOfMemoryAddress(address));
+    memory.write("{:0>8b}".format(byte));
 
 # The main concept of the application is a state object that contain the current state of the
 # machine: be it idle or currently washing.
@@ -126,10 +141,15 @@ def syntheticButtonPushed(time, state):
 
 def startButtonPushed(time, state):
     newState = copy.deepcopy(state)
+
     newState.isColdWaterValveOpened = True
-    newState.isHotWaterValveOpened = True
+    writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b00000100);
     print("{:.2f} ColdWaterValve opened".format(time))
+
+    newState.isHotWaterValveOpened = True
+    writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b00001000);
     print("{:.2f} HotWaterValve opened".format(time))
+
     return newState
 
 def waterLevelButtonPushed(time, state):
@@ -149,19 +169,27 @@ def waterLevelSensorLevel(time, state, level):
     if newState.soapStartedTime == 0.0 and newState.currentWaterLevel >= newState.soapWaterLevel:
         newState.isSoapValveOpened = True
         newState.soapStartedTime = time
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b00010000);
         print("{:.2f} SoapValve opened".format(time))
+        sleep(2.0)
 
     if newState.bleachStartedTime == 0.0 and newState.currentWaterLevel >= newState.bleachWaterLevel:
         newState.isBleachValveOpened = True
         newState.bleachStartedTime = time
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b00100000);
         print("{:.2f} BleachValve opened".format(time))
+        sleep(2.0)
 
     if newState.currentWaterLevel == newState.desiredWaterLevel:
         newState.isColdWaterValveOpened = False
-        newState.isHotWaterValveOpened = False
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) & 0b11111011);
         print("{:.2f} ColdWaterValve closed".format(time))
+
+        newState.isHotWaterValveOpened = False
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) & 0b11110111);
         print("{:.2f} HotWaterValve closed".format(time))
         newState.isWashing = True
+
         newState.washingStartedTime = time
         print("{:.2f} Washing started".format(time))
 
@@ -172,14 +200,17 @@ def timePassed(time, state):
 
     if newState.isSoapValveOpened and time >= (newState.soapStartedTime + newState.soapDuration):
         newState.isSoapValveOpened = False
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) & 0b11101111);
         print("{:.2f} SoapValve closed".format(time))
 
     if newState.isBleachValveOpened and time >= (newState.bleachStartedTime + newState.bleachDuration):
         newState.isBleachValveOpened = False
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) & 0b11011111);
         print("{:.2f} BleachValve closed".format(time))
 
     if newState.isFabricSoftenerValveOpened and time >= (newState.fabricSoftenerStartedTime + newState.fabricSoftenerDuration):
         newState.isFabricSoftenerValveOpened = False
+        writeMemoryAddress(0x0100, readMemoryAddress(0x0100) & 0b10111111);
         print("{:.2f} FabricSoftener closed".format(time))
 
     if newState.isWashing and newState.fabricSoftenerStartedTime == 0.0:
@@ -191,7 +222,9 @@ def timePassed(time, state):
         if time >= t:
             newState.isFabricSoftenerValveOpened = True
             newState.fabricSoftenerStartedTime = time
+            writeMemoryAddress(0x0100, readMemoryAddress(0x0100) | 0b01000000);
             print("{:.2f} FabricSoftener opened".format(time))
+            sleep(2.0)
 
     if state.isWashing and time >= (newState.washingStartedTime + newState.washingDuration):
         newState.isWashing = False
@@ -249,11 +282,12 @@ def parseCommand(line):
 
 def runWashingMachineWithTime(time, endTime, state):
     # We update the state every 0.25 minutes = 15 seconds until we reach the end time
-    delta = 0.2
-    if time + delta < endTime:
-        return runWashingMachineWithTime(time + delta, endTime, timePassed(time, state))
-    else:
-        return state
+    delta = 0.1
+    while time + delta < endTime:
+        sleep(0.25)
+        time += delta
+        state = timePassed(time, state)
+    return state
 
 def runWashingMachine(inputStream, time, state):
     line = inputStream.readline()
