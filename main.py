@@ -384,7 +384,7 @@ class Interface():
               
         def changeState(self, stateName):
             if self.selectedState != None and self.selectedState.isStarted:
-                self.setInformationScreenText("Veuillez arrêter le cycle en cours avant de changer de cycle")
+                self.appendInformationScreenText("Veuillez arrêter le cycle en cours avant de changer de cycle")
             else:                
                 writeMemoryAddressForState(stateName)
                 self.setInformationScreenText("Cycle {} sélectionné".format(stateName))
@@ -445,7 +445,7 @@ class Interface():
         def stopButtonPushed(self):
             self.selectedState.isStarted = False
             self.lightsLabel.config(bg="red")
-            self.setInformationScreenText("Cycle arrêté par l'usager.")
+            self.appendInformationScreenText("Cycle arrêté par l'usager.")
             
             writeMemoryAddress(0x0200, readMemoryAddress(0x0200) & 0b11110111);
         
